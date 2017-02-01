@@ -51,10 +51,14 @@ app.get('/config/:client/:version', (req, res) => {
     var version = req.params.version
 
     firebase.database().ref(`/config/${client}/${version}`).once('value').then(function(snapshot) {
-        if (snapshot.val().modified) {
-            res.json(snapshot.val())
+        if (snapshot.exists()) {
+            if (snapshot.val().modified) {
+                res.json(snapshot.val())
+            } else {
+                res.status(304).send('Not Modified')
+            }
         } else {
-            res.status(304).send('Not Modified')
+            res.status(404).send('Not Found')
         }
     });
 })
