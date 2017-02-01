@@ -28,18 +28,35 @@ app.post('/config', (req, res) => {
         res.status(400).send('400 Bad Request')
     }
 
-    firebase.database().ref(`config/${req.body.client}/${req.body.version}`).set({
-        [req.body.key]: req.body.value
-    });
+    let refPath = `config/${req.body.client}/${req.body.version}`
+    firebase.database().ref(refPath).once('value').then(function(snapshot) {
+        if (snapshot.exists()) {
+            firebase.database().ref(refPath).update({
+                modified: True,
+                [req.body.key]: req.body.value
+            })
+            res.status(201).send('Updated')
+        } else {
+            firebase.database().ref(refPath).set({
+                [req.body.key]: req.body.value
+            })
+            res.status(201).send('Created')
+        }
+    })
 
-    res.status(201).send('Created')
 })
 
 app.get('/config/:client/:version', (req, res) => {
     var client = req.params.client
     var version = req.params.version
 
-    res.status(200).send('OK')
+    firebase.database().ref(`/config/${client}/${version}`).once('value').then(function(snapshot) {
+        if (snapshot.val().modified) {
+            res.json(snapshot.val())
+        } else {
+            res.status(304).send('Not Modified')
+        }
+    });
 })
 
 app.listen(PORT, () => console.log('Listening on port %s.', PORT));
